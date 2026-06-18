@@ -9,22 +9,7 @@ a{
     font-family: "Poppins", sans-serif;
     border: 2px solid black;
 
-    /*
-    Inline Element - a
-    Problems with padding and Margin
-
-    margin: 50px;
-    padding:50px;
-    */
-    /*
-    Cannot change height and width :
-    Remains as it is 
-    Only takes what is Required
-
-    height: 100px; 
-    width: 100px;
-    */
-    
+   
 }
 a{
     display: inline-block;  

@@ -14,11 +14,3 @@ body{
 .box2{
     margin-top: 50px;
 }
-/*
-its not 40 bottom of box1 + 50 top of box2 = 90 
-margin between box1 and box2
-
-Here the greater margin is considered and it is collapsed
-So margin between box1 and box 2
-greater i.e 50 px is considered 
-*/

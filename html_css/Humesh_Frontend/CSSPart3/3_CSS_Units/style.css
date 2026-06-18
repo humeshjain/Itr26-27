@@ -5,30 +5,13 @@ body{
     font-family: "Poppins", sans-serif;
 }
 
-/* 
-     Relative Units 
-
-<!--  Two Types of CSS Units -->
-<!--  1) Absolute Units. -->
-<!--Fixed-->
-<!--  2) Relative Units. -->
-<!--Not Fixed-->
-*/
-/*  3 .Understanding em Unit in CSS */
-
 h1{
     font-size: 2em;
     border: 2em solid black;
     padding: 2em;
 }
-/* consider all h1
-  
-h1 --> body parent
-h1 --> div box1 parent --> body parent
- */
+
 
 .box1{
     font-size: 20px;
 }
-
-/* Consider fontsize of related class to change */
