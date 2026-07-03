@@ -1,0 +1,706 @@
+<html lang="en"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Attendance Tracker</title>
+  <!-- ========== CSS (style.css) ========== -->
+  <style>body { margin: 0; }</style><style>
+    /* ----- CSS (style.css) ----- */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    body {
+      background: #f0f5fb;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 2rem 1rem;
+    }
+
+    .container {
+      max-width: 1100px;
+      width: 100%;
+      background: white;
+      border-radius: 2rem;
+      padding: 2rem 2rem 1.5rem;
+      box-shadow: 0 20px 40px -12px rgba(0,20,40,0.15);
+      margin-top: 1rem;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 600;
+      color: #0b1e33;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 0.3rem;
+    }
+
+    .subhead {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 1.8rem;
+      border-bottom: 2px solid #eef3f9;
+      padding-bottom: 1rem;
+    }
+
+    .subhead p {
+      color: #2c4058;
+      background: #e9f0f8;
+      padding: 0.3rem 1.2rem;
+      border-radius: 40px;
+      font-weight: 500;
+      font-size: 0.95rem;
+    }
+
+    .badge {
+      background: #dce6f2;
+      padding: 0.3rem 1.1rem;
+      border-radius: 40px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #1a314a;
+    }
+
+    /* ---- add student form ---- */
+    .add-section {
+      background: #f8fbfe;
+      padding: 1.2rem 1.5rem;
+      border-radius: 1.2rem;
+      margin-bottom: 1.8rem;
+      border: 1px solid #e6edf6;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.8rem;
+      align-items: center;
+    }
+
+    .add-section input {
+      flex: 1;
+      min-width: 150px;
+      padding: 0.6rem 1rem;
+      border: 1.5px solid #dce6f2;
+      border-radius: 40px;
+      font-size: 0.95rem;
+      outline: none;
+      transition: 0.15s;
+    }
+
+    .add-section input:focus {
+      border-color: #1a3857;
+      box-shadow: 0 0 0 3px rgba(26,56,87,0.1);
+    }
+
+    .add-section .btn {
+      background: #1e2f47;
+      border: none;
+      padding: 0.6rem 1.6rem;
+      border-radius: 40px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: white;
+      cursor: pointer;
+      transition: 0.15s;
+      white-space: nowrap;
+    }
+
+    .add-section .btn:hover {
+      background: #11263a;
+      transform: scale(0.98);
+    }
+
+    .add-section .btn.remove-btn {
+      background: #b13e3e;
+    }
+
+    .add-section .btn.remove-btn:hover {
+      background: #8f2e2e;
+    }
+
+    /* ---- table ---- */
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: 1.2rem;
+      border: 1px solid #e6edf6;
+      margin-bottom: 1.5rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.92rem;
+    }
+
+    th {
+      background: #f0f6fe;
+      color: #0b1e33;
+      font-weight: 600;
+      padding: 0.9rem 1rem;
+      text-align: left;
+      border-bottom: 2px solid #dce6f2;
+    }
+
+    td {
+      padding: 0.8rem 1rem;
+      border-bottom: 1px solid #eef3f9;
+      color: #1f3752;
+      vertical-align: middle;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background: #f8fbfe;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 0.2rem 1rem;
+      border-radius: 30px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: #e7f0fa;
+      color: #1d3855;
+    }
+
+    .status-badge.present {
+      background: #dff0e0;
+      color: #1a5a2a;
+    }
+
+    .status-badge.absent {
+      background: #fde8e8;
+      color: #9e2a2a;
+    }
+
+    .action-btns {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+
+    .small-btn {
+      background: white;
+      border: 1.5px solid #b7ccdf;
+      padding: 0.2rem 0.8rem;
+      border-radius: 30px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: #1a3857;
+      cursor: pointer;
+      transition: 0.15s;
+    }
+
+    .small-btn:hover {
+      background: #1a3857;
+      border-color: #1a3857;
+      color: white;
+    }
+
+    .small-btn.danger {
+      border-color: #c0392b;
+      color: #c0392b;
+    }
+
+    .small-btn.danger:hover {
+      background: #c0392b;
+      border-color: #c0392b;
+      color: white;
+    }
+
+    .small-btn.success {
+      border-color: #27ae60;
+      color: #27ae60;
+    }
+
+    .small-btn.success:hover {
+      background: #27ae60;
+      border-color: #27ae60;
+      color: white;
+    }
+
+    /* ---- attendance controls ---- */
+    .controls-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.8rem;
+      margin: 1rem 0 1.2rem;
+    }
+
+    .btn-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .btn {
+      background: white;
+      border: 1.5px solid #b7ccdf;
+      padding: 0.4rem 1.2rem;
+      border-radius: 40px;
+      font-weight: 600;
+      font-size: 0.8rem;
+      color: #1a3857;
+      cursor: pointer;
+      transition: 0.15s;
+    }
+
+    .btn:hover {
+      background: #1a3857;
+      border-color: #1a3857;
+      color: white;
+    }
+
+    .btn.primary {
+      background: #1e2f47;
+      border-color: #1e2f47;
+      color: white;
+    }
+
+    .btn.primary:hover {
+      background: #11263a;
+    }
+
+    .btn.danger {
+      border-color: #c0392b;
+      color: #c0392b;
+    }
+
+    .btn.danger:hover {
+      background: #c0392b;
+      border-color: #c0392b;
+      color: white;
+    }
+
+    .info-text {
+      font-size: 0.85rem;
+      color: #2f5b7a;
+      background: #e9f0f8;
+      padding: 0.2rem 1rem;
+      border-radius: 30px;
+    }
+
+    /* toast */
+    .toast-message {
+      position: fixed;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #0b1e33;
+      color: white;
+      padding: 0.7rem 2rem;
+      border-radius: 60px;
+      font-weight: 500;
+      box-shadow: 0 12px 28px rgba(0,0,0,0.15);
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      pointer-events: none;
+      font-size: 0.9rem;
+      z-index: 999;
+    }
+
+    .toast-message.show {
+      opacity: 1;
+    }
+
+    /* date display */
+    .date-display {
+      font-weight: 500;
+      color: #1a3857;
+      background: #eef4fa;
+      padding: 0.2rem 1.2rem;
+      border-radius: 30px;
+      font-size: 0.85rem;
+      display: inline-block;
+    }
+
+    @media (max-width: 650px) {
+      .container { padding: 1.2rem; }
+      h1 { font-size: 1.6rem; }
+      .add-section { flex-direction: column; align-items: stretch; }
+      .controls-row { flex-direction: column; align-items: stretch; }
+      .btn-group { justify-content: center; }
+      .subhead { flex-direction: column; align-items: start; gap: 0.3rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- header -->
+    <div class="subhead">
+      <h1>📚 <span>Attendance Tracker</span></h1>
+      <p><span class="badge" id="studentCount">1 students</span></p>
+    </div>
+
+    <!-- add student -->
+    <div class="add-section">
+      <input type="text" id="studentNameInput" placeholder="Enter student name...">
+      <input type="text" id="studentSubjectInput" placeholder="Subject (optional)">
+      <button class="btn" id="addStudentBtn">➕ Add Student</button>
+      <button class="btn remove-btn" id="removeSelectedBtn">🗑️ Remove Selected</button>
+    </div>
+
+    <!-- date and controls -->
+    <div class="controls-row">
+      <div class="date-display" id="currentDate">📅 Mon, Jun 22, 2026</div>
+      <div class="btn-group">
+        <button class="btn success" id="markPresentAll">✅ All Present</button>
+        <button class="btn danger" id="markAbsentAll">❌ All Absent</button>
+        <button class="btn primary" id="resetDefault">↺ Reset</button>
+      </div>
+    </div>
+
+    <!-- student table -->
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:30px;"><input type="checkbox" id="selectAllCheckbox"></th>
+            <th>#</th>
+            <th>Name</th>
+            <th>Subject</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="studentBody">
+            <tr data-id="6">
+              <td><input type="checkbox" class="row-checkbox" data-id="6"></td>
+              <td>1</td>
+              <td><strong>Humesh Jain</strong></td>
+              <td>Internship</td>
+              <td><span class="status-badge present">Present</span></td>
+              <td>
+                <div class="action-btns">
+                  <button class="small-btn success toggle-btn" data-id="6">🔄 Toggle</button>
+                  <button class="small-btn danger remove-btn" data-id="6">✕</button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+      </table>
+    </div>
+
+    <!-- footer info -->
+    <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:0.5rem; margin-top:0.5rem;">
+      <span class="info-text" id="attendanceInfo">Present: 1 / 1</span>
+      <span class="info-text" id="dateInfo">📆 Attendance for Mon, Jun 22, 2026</span>
+    </div>
+  </div>
+
+  <!-- toast -->
+  <div id="toast" class="toast-message">✅ All marked present</div>
+
+  <!-- ========== JAVASCRIPT (script.js) ========== -->
+  <script>
+    (function() {
+      // ----- data -----
+      let students = [
+        { id: 1, name: 'Emma Chen', subject: 'Mathematics', present: true },
+        { id: 2, name: 'Liam Park', subject: 'Science', present: false },
+        { id: 3, name: 'Sophia Rivera', subject: 'English', present: true },
+        { id: 4, name: 'Noah Kim', subject: 'History', present: false },
+        { id: 5, name: 'Olivia Smith', subject: 'Art', present: true }
+      ];
+      let nextId = 6;
+
+      // DOM refs
+      const tbody = document.getElementById('studentBody');
+      const studentCount = document.getElementById('studentCount');
+      const attendanceInfo = document.getElementById('attendanceInfo');
+      const dateInfo = document.getElementById('dateInfo');
+      const currentDate = document.getElementById('currentDate');
+      const toast = document.getElementById('toast');
+      const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+
+      let toastTimer = null;
+
+      // helpers
+      function showToast(msg) {
+        if (toastTimer) { clearTimeout(toastTimer); toast.classList.remove('show'); }
+        void toast.offsetWidth;
+        toast.textContent = msg || '✨ done';
+        toast.classList.add('show');
+        toastTimer = setTimeout(() => { toast.classList.remove('show'); toastTimer = null; }, 2000);
+      }
+
+      function updateStats() {
+        const total = students.length;
+        const present = students.filter(s => s.present).length;
+        studentCount.textContent = `${total} students`;
+        attendanceInfo.textContent = `Present: ${present} / ${total}`;
+        // update select all checkbox state
+        if (total > 0) {
+          const checked = document.querySelectorAll('#studentBody tr .row-checkbox:checked').length;
+          selectAllCheckbox.checked = (checked === total);
+          selectAllCheckbox.indeterminate = (checked > 0 && checked < total);
+        } else {
+          selectAllCheckbox.checked = false;
+          selectAllCheckbox.indeterminate = false;
+        }
+      }
+
+      function renderTable() {
+        let html = '';
+        students.forEach((s, index) => {
+          const statusClass = s.present ? 'present' : 'absent';
+          const statusText = s.present ? 'Present' : 'Absent';
+          html += `
+            <tr data-id="${s.id}">
+              <td><input type="checkbox" class="row-checkbox" data-id="${s.id}" /></td>
+              <td>${index + 1}</td>
+              <td><strong>${s.name}</strong></td>
+              <td>${s.subject || '—'}</td>
+              <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+              <td>
+                <div class="action-btns">
+                  <button class="small-btn success toggle-btn" data-id="${s.id}">🔄 Toggle</button>
+                  <button class="small-btn danger remove-btn" data-id="${s.id}">✕</button>
+                </div>
+              </td>
+            </tr>
+          `;
+        });
+        tbody.innerHTML = html;
+        updateStats();
+      }
+
+      // ----- CRUD operations -----
+      function addStudent(name, subject) {
+        if (!name.trim()) {
+          showToast('⚠️ Please enter a name');
+          return false;
+        }
+        const existing = students.find(s => s.name.toLowerCase() === name.trim().toLowerCase());
+        if (existing) {
+          showToast(`⚠️ "${name.trim()}" already exists`);
+          return false;
+        }
+        students.push({
+          id: nextId++,
+          name: name.trim(),
+          subject: subject.trim() || '—',
+          present: false
+        });
+        renderTable();
+        showToast(`✅ Added "${name.trim()}"`);
+        return true;
+      }
+
+      function removeStudent(id) {
+        const student = students.find(s => s.id === id);
+        if (!student) return;
+        students = students.filter(s => s.id !== id);
+        renderTable();
+        showToast(`🗑️ Removed "${student.name}"`);
+      }
+
+      function removeSelectedStudents() {
+        const checkboxes = document.querySelectorAll('.row-checkbox:checked');
+        if (checkboxes.length === 0) {
+          showToast('⚠️ Select at least one student');
+          return;
+        }
+        const ids = Array.from(checkboxes).map(cb => parseInt(cb.dataset.id));
+        const names = students.filter(s => ids.includes(s.id)).map(s => s.name);
+        students = students.filter(s => !ids.includes(s.id));
+        renderTable();
+        showToast(`🗑️ Removed ${names.length} student(s): ${names.join(', ')}`);
+      }
+
+      function toggleStudent(id) {
+        const student = students.find(s => s.id === id);
+        if (!student) return;
+        student.present = !student.present;
+        renderTable();
+        showToast(`🔄 ${student.name} → ${student.present ? 'Present' : 'Absent'}`);
+      }
+
+      function markAllPresent() {
+        students.forEach(s => s.present = true);
+        renderTable();
+        showToast('✅ All marked present');
+      }
+
+      function markAllAbsent() {
+        students.forEach(s => s.present = false);
+        renderTable();
+        showToast('❌ All marked absent');
+      }
+
+      function resetDefault() {
+        const defaultStates = [true, false, true, false, true];
+        students.forEach((s, i) => {
+          if (i < defaultStates.length) s.present = defaultStates[i];
+          else s.present = false;
+        });
+        renderTable();
+        showToast('↺ Reset to default');
+      }
+
+      // ----- date display -----
+      function updateDate() {
+        const now = new Date();
+        const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
+        const dateStr = now.toLocaleDateString('en-US', options);
+        currentDate.textContent = `📅 ${dateStr}`;
+        dateInfo.textContent = `📆 Attendance for ${dateStr}`;
+      }
+
+      // ----- event binding -----
+      document.getElementById('addStudentBtn').addEventListener('click', function() {
+        const nameInput = document.getElementById('studentNameInput');
+        const subjectInput = document.getElementById('studentSubjectInput');
+        addStudent(nameInput.value, subjectInput.value);
+        nameInput.value = '';
+        subjectInput.value = '';
+        nameInput.focus();
+      });
+
+      document.getElementById('removeSelectedBtn').addEventListener('click', removeSelectedStudents);
+
+      document.getElementById('markPresentAll').addEventListener('click', markAllPresent);
+      document.getElementById('markAbsentAll').addEventListener('click', markAllAbsent);
+      document.getElementById('resetDefault').addEventListener('click', resetDefault);
+
+      // select all checkbox
+      selectAllCheckbox.addEventListener('change', function() {
+        const checkboxes = document.querySelectorAll('.row-checkbox');
+        checkboxes.forEach(cb => cb.checked = this.checked);
+      });
+
+      // event delegation for row buttons
+      tbody.addEventListener('click', function(e) {
+        const target = e.target;
+        if (target.classList.contains('toggle-btn')) {
+          const id = parseInt(target.dataset.id);
+          toggleStudent(id);
+        } else if (target.classList.contains('remove-btn')) {
+          const id = parseInt(target.dataset.id);
+          removeStudent(id);
+        } else if (target.classList.contains('row-checkbox')) {
+          // update select all state
+          const checked = document.querySelectorAll('.row-checkbox:checked').length;
+          const total = document.querySelectorAll('.row-checkbox').length;
+          if (total > 0) {
+            selectAllCheckbox.checked = (checked === total);
+            selectAllCheckbox.indeterminate = (checked > 0 && checked < total);
+          }
+        }
+      });
+
+      // Enter key on name input
+      document.getElementById('studentNameInput').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+          document.getElementById('addStudentBtn').click();
+        }
+      });
+
+      // ---- initial render ----
+      renderTable();
+      updateDate();
+      showToast('👋 Click a student to toggle, or add new!');
+
+      // ---- DOWNLOAD HANDLERS (three separate files, no download button in UI) ----
+      // We'll attach download functions to the window so they can be called from console or external buttons
+      // But we'll also create a small hidden download helper
+      window.downloadFiles = function() {
+        const styleContent = document.querySelector('style').textContent;
+        const scriptContent = document.querySelector('script:last-of-type').textContent;
+        const htmlContent = document.documentElement.outerHTML;
+
+        function downloadFile(filename, content, mime = 'text/plain') {
+          const blob = new Blob([content], { type: mime });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }
+
+        // download all three
+        downloadFile('index.html', htmlContent, 'text/html');
+        setTimeout(() => downloadFile('style.css', styleContent, 'text/css'), 200);
+        setTimeout(() => downloadFile('script.js', scriptContent, 'application/javascript'), 400);
+        showToast('📦 Downloading 3 files...');
+      };
+
+      // Also expose individual downloads
+      window.downloadHTML = function() {
+        const content = document.documentElement.outerHTML;
+        const blob = new Blob([content], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'index.html';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('⬇️ Downloaded index.html');
+      };
+
+      window.downloadCSS = function() {
+        const content = document.querySelector('style').textContent;
+        const blob = new Blob([content], { type: 'text/css' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'style.css';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('⬇️ Downloaded style.css');
+      };
+
+      window.downloadJS = function() {
+        const content = document.querySelector('script:last-of-type').textContent;
+        const blob = new Blob([content], { type: 'application/javascript' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'script.js';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('⬇️ Downloaded script.js');
+      };
+
+      // Show download instructions in console
+      console.log('%c📥 Download files:', 'font-weight:bold; font-size:16px;');
+      console.log('  downloadHTML()  - download index.html');
+      console.log('  downloadCSS()   - download style.css');
+      console.log('  downloadJS()    - download script.js');
+      console.log('  downloadFiles() - download all three');
+      console.log('You can run these in the console to download the files.');
+
+      // Also add keyboard shortcut: Ctrl+Shift+D to download all
+      document.addEventListener('keydown', function(e) {
+        if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+          e.preventDefault();
+          window.downloadFiles();
+        }
+      });
+
+      showToast('💡 Press Ctrl+Shift+D to download all files');
+
+    })();
+  </script>
+
+</body></html>

@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Host Dashboard - Live Quiz</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container" id="hostDashboard">
+        <h1>🎯 Quiz Host</h1>
+        
+        <!-- Create Quiz Section -->
+        <div id="createSection">
+            <p class="subtitle">Start a new live quiz</p>
+            <div class="form-group">
+                <label for="hostName">Your Name (Host)</label>
+                <input type="text" id="hostName" placeholder="Enter your name" value="Host">
+            </div>
+            <button class="btn" id="createQuizBtn">🚀 Create Quiz</button>
+            <div id="createResult"></div>
+        </div>
+        
+        <!-- Quiz Dashboard -->
+        <div id="quizDashboard" class="hidden">
+            <div class="info-box">
+                <p><strong>Quiz Code:</strong></p>
+                <div class="quiz-code-display" id="quizCodeDisplay">XXXXXX</div>
+                <p style="text-align: center; color: #666; margin-top: 5px;">Share this code with players to join</p>
+            </div>
+            
+            <div class="info-box">
+                <h3>👥 Players (<span id="playerCount">0</span>)</h3>
+                <div class="player-list" id="playerList"></div>
+            </div>
+            
+            <div id="questionSection">
+                <div id="questionDisplay" class="info-box">
+                    <h3 id="questionText">Question will appear here</h3>
+                    <p id="questionNumber" style="color: #666; margin-top: 5px;">Question 0 of 0</p>
+                </div>
+                
+                <div class="options-grid" id="optionsContainer"></div>
+                
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button class="btn btn-success" id="startQuizBtn">▶ Start Quiz</button>
+                    <button class="btn btn-secondary" id="nextQuestionBtn" disabled>Next Question →</button>
+                </div>
+            </div>
+            
+            <div id="leaderboardSection" class="hidden">
+                <h3>🏆 Final Results</h3>
+                <div class="leaderboard" id="finalLeaderboard"></div>
+                <button class="btn" id="restartQuizBtn">🔄 Create New Quiz</button>
+            </div>
+            
+            <div id="statusMessage" class="status-message"></div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // HOST DASHBOARD - COMPLETE JAVASCRIPT
+        // ============================================
+        
+        console.log("🚀 Host dashboard loading...");
+        
+        // API Base URL
+        const API_BASE = '';
+        
+        // DOM Elements
+        const hostNameInput = document.getElementById('hostName');
+        const createBtn = document.getElementById('createQuizBtn');
+        const createResult = document.getElementById('createResult');
+        const createSection = document.getElementById('createSection');
+        const quizDashboard = document.getElementById('quizDashboard');
+        const quizCodeDisplay = document.getElementById('quizCodeDisplay');
+        const playerList = document.getElementById('playerList');
+        const playerCount = document.getElementById('playerCount');
+        const questionText = document.getElementById('questionText');
+        const questionNumber = document.getElementById('questionNumber');
+        const optionsContainer = document.getElementById('optionsContainer');
+        const startQuizBtn = document.getElementById('startQuizBtn');
+        const nextQuestionBtn = document.getElementById('nextQuestionBtn');
+        const statusMessage = document.getElementById('statusMessage');
+        const leaderboardSection = document.getElementById('leaderboardSection');
+        const finalLeaderboard = document.getElementById('finalLeaderboard');
+        const restartBtn = document.getElementById('restartQuizBtn');
+        const questionSection = document.getElementById('questionSection');
+        
+        // State
+        let quizCode = null;
+        let ws = null;
+        let isQuizActive = false;
+        let currentQuestion = null;
+        let playerPollingInterval = null;
+        
+        console.log("✅ DOM elements loaded");
+        
+        // ============================================
+        // API FUNCTIONS
+        // ============================================
+        
+        async function createQuiz(hostName) {
+            console.log("📤 Creating quiz for:", hostName);
+            try {
+                const response = await fetch(`${API_BASE}/api/create-quiz`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ host_name: hostName })
+                });
+                
+                const data = await response.json();
+                console.log("📥 Response:", data);
+                
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Failed to create quiz');
+                }
+                
+                return data;
+            } catch (error) {
+                console.error("❌ Error creating quiz:", error);
+                throw error;
+            }
+        }
+        
+        async function startQuiz(code) {
+            console.log("📤 Starting quiz:", code);
+            try {
+                const response = await fetch(`${API_BASE}/api/start-quiz`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ quiz_code: code })
+                });
+                
+                const data = await response.json();
+                console.log("📥 Response:", data);
+                
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Failed to start quiz');
+                }
+                
+                return data;
+            } catch (error) {
+                console.error("❌ Error starting quiz:", error);
+                throw error;
+            }
+        }
+        
+        async function nextQuestion(code) {
+            console.log("📤 Next question for:", code);
+            try {
+                const response = await fetch(`${API_BASE}/api/next-question`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ quiz_code: code })
+                });
+                
+                const data = await response.json();
+                console.log("📥 Response:", data);
+                
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Failed to get next question');
+                }
+                
+                return data;
+            } catch (error) {
+                console.error("❌ Error getting next question:", error);
+                throw error;
+            }
+        }
+        
+        async function getQuizState(code) {
+            try {
+                const response = await fetch(`${API_BASE}/api/quiz-state/${code}`);
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Failed to get quiz state');
+                }
+                return data;
+            } catch (error) {
+                console.error("❌ Error getting quiz state:", error);
+                return null;
+            }
+        }
+        
+        // ============================================
+        // WEBSOCKET FUNCTIONS
+        // ============================================
+        
+        function connectWebSocket(code, playerId) {
+            console.log("🔌 Connecting WebSocket for:", code);
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws/${code}/${playerId}`;
+            console.log("🔗 WebSocket URL:", wsUrl);
+            
+            ws = new WebSocket(wsUrl);
+            
+            ws.onopen = () => {
+                console.log("✅ WebSocket connected");
+                showStatus('Connected to server', 'success');
+            };
+            
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    console.log("📨 WebSocket message:", data);
+                    handleWebSocketMessage(data);
+                } catch (error) {
+                    console.error("❌ Error parsing WebSocket message:", error);
+                }
+            };
+            
+            ws.onerror = (error) => {
+                console.error("❌ WebSocket error:", error);
+                showStatus('WebSocket error', 'error');
+            };
+            
+            ws.onclose = () => {
+                console.log("🔌 WebSocket disconnected");
+                showStatus('Disconnected from server', 'error');
+            };
+            
+            return ws;
+        }
+        
+        function handleWebSocketMessage(data) {
+            if (data.type === 'new_question') {
+                displayQuestion(data.question);
+            } else if (data.type === 'quiz_finished') {
+                showLeaderboard(data.leaderboard);
+            } else if (data.type === 'player_left') {
+                updatePlayerList();
+            } else if (data.type === 'waiting') {
+                showStatus(data.message || 'Waiting for players...', 'info');
+            }
+        }
+        
+        // ============================================
+        // UI FUNCTIONS
+        // ============================================
+        
+        function showStatus(message, type = 'info') {
+            statusMessage.textContent = message;
+            statusMessage.className = `status-message ${type}`;
+            statusMessage.classList.remove('hidden');
+            console.log(`📢 Status (${type}):`, message);
+        }
+        
+        function hideStatus() {
+            statusMessage.classList.add('hidden');
+        }
+        
+        function displayQuestion(question) {
+            console.log("📝 Displaying question:", question);
+            currentQuestion = question;
+            questionText.textContent = question.question;
+            questionNumber.textContent = `Question ${question.question_number} of ${question.total_questions}`;
+            
+            optionsContainer.innerHTML = question.options.map((option, index) => 
+                `<button class="option-btn" data-index="${index}" disabled>
+                    ${String.fromCharCode(65 + index)}. ${option}
+                </button>`
+            ).join('');
+            
+            nextQuestionBtn.disabled = false;
+            showStatus('Question displayed - waiting for players to answer', 'info');
+        }
+        
+        async function updatePlayerList() {
+            const state = await getQuizState(quizCode);
+            if (state && state.players) {
+                playerList.innerHTML = state.players.map(p => 
+                    `<div class="player-item">
+                        <span>${p.name}</span>
+                        <span>⭐ ${p.score || 0}</span>
+                    </div>`
+                ).join('');
+                playerCount.textContent = state.player_count || state.players.length;
+            }
+        }
+        
+        function showLeaderboard(leaderboard) {
+            console.log("🏆 Showing leaderboard:", leaderboard);
+            leaderboardSection.classList.remove('hidden');
+            questionSection.style.display = 'none';
+            nextQuestionBtn.disabled = true;
+            
+            finalLeaderboard.innerHTML = leaderboard.map((player, index) => 
+                `<div class="leaderboard-item">
+                    <span>
+                        <span class="rank">#${index + 1}</span>
+                        ${player.name}
+                    </span>
+                    <span class="score">${player.score} pts</span>
+                </div>`
+            ).join('');
+            
+            showStatus('Quiz finished! Check the leaderboard.', 'success');
+        }
+        
+        // ============================================
+        // EVENT HANDLERS
+        // ============================================
+        
+        // Create Quiz
+        createBtn.addEventListener('click', async () => {
+            console.log("🖱️ Create Quiz button clicked!");
+            const hostName = hostNameInput.value.trim() || 'Host';
+            createBtn.disabled = true;
+            createBtn.textContent = '⏳ Creating...';
+            
+            try {
+                const result = await createQuiz(hostName);
+                quizCode = result.quiz_code;
+                console.log("✅ Quiz created with code:", quizCode);
+                
+                // Show dashboard
+                createSection.style.display = 'none';
+                quizDashboard.classList.remove('hidden');
+                quizCodeDisplay.textContent = quizCode;
+                
+                showStatus(`✅ Quiz created! Share code: ${quizCode}`, 'success');
+                
+                // Connect WebSocket (host uses special ID)
+                connectWebSocket(quizCode, 'host_' + quizCode);
+                
+                // Start polling for player updates
+                if (playerPollingInterval) clearInterval(playerPollingInterval);
+                playerPollingInterval = setInterval(updatePlayerList, 2000);
+                
+                // Update player list immediately
+                await updatePlayerList();
+                
+            } catch (error) {
+                console.error("❌ Create quiz error:", error);
+                showStatus('Error creating quiz: ' + error.message, 'error');
+            } finally {
+                createBtn.disabled = false;
+                createBtn.textContent = '🚀 Create Quiz';
+            }
+        });
+        
+        // Start Quiz
+        startQuizBtn.addEventListener('click', async () => {
+            console.log("🖱️ Start Quiz button clicked!");
+            if (!quizCode) {
+                showStatus('No quiz code found', 'error');
+                return;
+            }
+            
+            startQuizBtn.disabled = true;
+            startQuizBtn.textContent = '⏳ Starting...';
+            
+            try {
+                await startQuiz(quizCode);
+                isQuizActive = true;
+                startQuizBtn.textContent = '✅ Started!';
+                showStatus('Quiz started! Questions sent to players.', 'success');
+                nextQuestionBtn.disabled = false;
+            } catch (error) {
+                console.error("❌ Start quiz error:", error);
+                showStatus('Error starting quiz: ' + error.message, 'error');
+                startQuizBtn.disabled = false;
+                startQuizBtn.textContent = '▶ Start Quiz';
+            }
+        });
+        
+        // Next Question
+        nextQuestionBtn.addEventListener('click', async () => {
+            console.log("🖱️ Next Question button clicked!");
+            if (!quizCode) {
+                showStatus('No quiz code found', 'error');
+                return;
+            }
+            
+            nextQuestionBtn.disabled = true;
+            nextQuestionBtn.textContent = '⏳ Loading...';
+            
+            try {
+                const result = await nextQuestion(quizCode);
+                console.log("Next question result:", result);
+                
+                if (result.has_next) {
+                    showStatus('Next question sent to players!', 'success');
+                    nextQuestionBtn.textContent = 'Next Question →';
+                    nextQuestionBtn.disabled = false;
+                } else {
+                    showStatus('Quiz finished!', 'success');
+                    nextQuestionBtn.textContent = '✅ Finished';
+                    nextQuestionBtn.disabled = true;
+                }
+            } catch (error) {
+                console.error("❌ Next question error:", error);
+                showStatus('Error: ' + error.message, 'error');
+                nextQuestionBtn.textContent = 'Next Question →';
+                nextQuestionBtn.disabled = false;
+            }
+        });
+        
+        // Restart
+        restartBtn.addEventListener('click', () => {
+            console.log("🔄 Restarting...");
+            location.reload();
+        });
+        
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+        
+        console.log("✅ Host dashboard initialized!");
+        
+        // Test API connection
+        fetch(`${API_BASE}/api/create-quiz`)
+            .then(() => console.log("✅ API connection test passed"))
+            .catch(err => console.error("❌ API connection test failed:", err));
+        
+        // Handle Enter key on host name input
+        hostNameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                createBtn.click();
+            }
+        });
+        
+        console.log("🎯 Ready! Enter your name and click 'Create Quiz'");
+    </script>
+</body>
+</html>

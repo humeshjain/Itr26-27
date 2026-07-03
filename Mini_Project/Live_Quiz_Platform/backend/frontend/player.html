@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Player - Live Quiz</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container" id="playerView">
+        <h1>📝 Live Quiz</h1>
+        
+        <!-- Join Section -->
+        <div id="joinSection">
+            <p class="subtitle">Join a quiz with the code</p>
+            <div class="form-group">
+                <label for="quizCodeInput">Quiz Code</label>
+                <input type="text" id="quizCodeInput" placeholder="Enter 6-digit code" maxlength="6" style="text-transform: uppercase;">
+            </div>
+            <div class="form-group">
+                <label for="playerNameInput">Your Name</label>
+                <input type="text" id="playerNameInput" placeholder="Enter your name">
+            </div>
+            <button class="btn" id="joinQuizBtn">🎮 Join Quiz</button>
+            <div id="joinResult"></div>
+        </div>
+        
+        <!-- Quiz Interface -->
+        <div id="quizInterface" class="hidden">
+            <div class="info-box">
+                <p><strong>Quiz Code:</strong> <span id="playerQuizCode">XXXXXX</span></p>
+                <p><strong>Player:</strong> <span id="playerNameDisplay"></span></p>
+                <p><strong>Score:</strong> <span id="playerScore">0</span> ⭐</p>
+            </div>
+            
+            <div id="questionContainer">
+                <h3 id="playerQuestionText">Waiting for question...</h3>
+                <p id="playerQuestionNumber" style="color: #666; margin: 10px 0;"></p>
+                
+                <div class="options-grid" id="playerOptions"></div>
+            </div>
+            
+            <div id="waitingMessage" class="status-message info">
+                ⏳ Waiting for host to start the quiz...
+            </div>
+            
+            <div id="resultContainer" class="hidden">
+                <div id="answerResult" class="status-message"></div>
+            </div>
+            
+            <div id="leaderboardContainer" class="hidden">
+                <h3>🏆 Leaderboard</h3>
+                <div class="leaderboard" id="playerLeaderboard"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // PLAYER DASHBOARD - COMPLETE JAVASCRIPT
+        // ============================================
+        
+        console.log("🎮 Player dashboard loading...");
+        
+        // DOM Elements
+        const quizCodeInput = document.getElementById('quizCodeInput');
+        const playerNameInput = document.getElementById('playerNameInput');
+        const joinBtn = document.getElementById('joinQuizBtn');
+        const joinResult = document.getElementById('joinResult');
+        const joinSection = document.getElementById('joinSection');
+        const quizInterface = document.getElementById('quizInterface');
+        const playerQuizCode = document.getElementById('playerQuizCode');
+        const playerNameDisplay = document.getElementById('playerNameDisplay');
+        const playerScore = document.getElementById('playerScore');
+        const questionText = document.getElementById('playerQuestionText');
+        const questionNumber = document.getElementById('playerQuestionNumber');
+        const optionsContainer = document.getElementById('playerOptions');
+        const waitingMessage = document.getElementById('waitingMessage');
+        const resultContainer = document.getElementById('resultContainer');
+        const answerResult = document.getElementById('answerResult');
+        const leaderboardContainer = document.getElementById('leaderboardContainer');
+        const playerLeaderboard = document.getElementById('playerLeaderboard');
+        const questionContainer = document.getElementById('questionContainer');
+        
+        // State
+        let quizCode = null;
+        let playerId = null;
+        let playerName = null;
+        let ws = null;
+        let currentQuestion = null;
+        let hasAnswered = false;
+        
+        console.log("✅ DOM elements loaded");
+        
+        // ============================================
+        // API FUNCTIONS
+        // ============================================
+        
+        async function joinQuiz(code, name) {
+            console.log("📤 Joining quiz:", code, "as:", name);
+            try {
+                const response = await fetch(`/api/join-quiz`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        quiz_code: code.toUpperCase(), 
+                        player_name: name 
+                    })
+                });
+                
+                const data = await response.json();
+                console.log("📥 Response:", data);
+                
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Failed to join quiz');
+                }
+                
+                return data;
+            } catch (error) {
+                console.error("❌ Error joining quiz:", error);
+                throw error;
+            }
+        }
+        
+        async function submitAnswer(code, playerId, answerIndex) {
+            console.log("📤 Submitting answer:", answerIndex);
+            try {
+                const response = await fetch(`/api/submit-answer`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        quiz_code: code, 
+                        player_id: playerId, 
+                        answer_index: answerIndex 
+                    })
+                });
+                
+                const data = await response.json();
+                console.log("📥 Response:", data);
+                
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Failed to submit answer');
+                }
+                
+                return data;
+            } catch (error) {
+                console.error("❌ Error submitting answer:", error);
+                throw error;
+            }
+        }
+        
+        async function getQuizState(code) {
+            try {
+                const response = await fetch(`/api/quiz-state/${code}`);
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Failed to get quiz state');
+                }
+                return data;
+            } catch (error) {
+                console.error("❌ Error getting quiz state:", error);
+                return null;
+            }
+        }
+        
+        // ============================================
+        // WEBSOCKET FUNCTIONS
+        // ============================================
+        
+        function connectWebSocket(code, playerId) {
+            console.log("🔌 Connecting WebSocket for:", code, "player:", playerId);
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws/${code}/${playerId}`;
+            console.log("🔗 WebSocket URL:", wsUrl);
+            
+            ws = new WebSocket(wsUrl);
+            
+            ws.onopen = () => {
+                console.log("✅ WebSocket connected");
+                showJoinResult('Connected to server! Waiting for quiz...', 'success');
+            };
+            
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    console.log("📨 WebSocket message:", data);
+                    handleWebSocketMessage(data);
+                } catch (error) {
+                    console.error("❌ Error parsing WebSocket message:", error);
+                }
+            };
+            
+            ws.onerror = (error) => {
+                console.error("❌ WebSocket error:", error);
+                showJoinResult('WebSocket error. Please refresh and try again.', 'error');
+            };
+            
+            ws.onclose = () => {
+                console.log("🔌 WebSocket disconnected");
+                showJoinResult('Disconnected from server', 'error');
+            };
+            
+            return ws;
+        }
+        
+        function handleWebSocketMessage(data) {
+            console.log("📨 Handling message:", data.type);
+            
+            if (data.type === 'new_question') {
+                displayQuestion(data.question);
+            } else if (data.type === 'quiz_finished') {
+                showLeaderboard(data.leaderboard);
+            } else if (data.type === 'waiting') {
+                showWaitingMessage(data.message || 'Waiting for quiz to start...');
+            } else if (data.type === 'player_left') {
+                // Just log it
+                console.log("👋 Player left");
+            }
+        }
+        
+        // ============================================
+        // UI FUNCTIONS
+        // ============================================
+        
+        function showJoinResult(message, type = 'info') {
+            joinResult.textContent = message;
+            joinResult.className = `status-message ${type}`;
+            joinResult.classList.remove('hidden');
+            console.log(`📢 Join status (${type}):`, message);
+        }
+        
+        function hideJoinResult() {
+            joinResult.classList.add('hidden');
+        }
+        
+        function showWaitingMessage(message) {
+            waitingMessage.textContent = message || '⏳ Waiting for quiz to start...';
+            waitingMessage.classList.remove('hidden');
+            questionContainer.style.display = 'block';
+            resultContainer.classList.add('hidden');
+            leaderboardContainer.classList.add('hidden');
+        }
+        
+        function displayQuestion(question) {
+            console.log("📝 Displaying question:", question);
+            currentQuestion = question;
+            hasAnswered = false;
+            
+            waitingMessage.classList.add('hidden');
+            resultContainer.classList.add('hidden');
+            leaderboardContainer.classList.add('hidden');
+            questionContainer.style.display = 'block';
+            
+            questionText.textContent = question.question;
+            questionNumber.textContent = `Question ${question.question_number} of ${question.total_questions}`;
+            
+            optionsContainer.innerHTML = question.options.map((option, index) => 
+                `<button class="option-btn" data-index="${index}" onclick="playerApp.selectAnswer(${index})">
+                    ${String.fromCharCode(65 + index)}. ${option}
+                </button>`
+            ).join('');
+            
+            // Enable all options
+            optionsContainer.querySelectorAll('.option-btn').forEach(btn => {
+                btn.disabled = false;
+                btn.classList.remove('selected', 'correct', 'wrong');
+            });
+            
+            showJoinResult('Question loaded! Select your answer.', 'info');
+        }
+        
+        async function selectAnswer(index) {
+            console.log("🖱️ Answer selected:", index);
+            if (hasAnswered) {
+                console.log("⚠️ Already answered this question");
+                return;
+            }
+            
+            const buttons = optionsContainer.querySelectorAll('.option-btn');
+            buttons.forEach(btn => btn.disabled = true);
+            
+            try {
+                const result = await submitAnswer(quizCode, playerId, index);
+                console.log("✅ Answer submitted:", result);
+                
+                // Highlight correct/wrong
+                buttons.forEach((btn, i) => {
+                    if (i === index) {
+                        btn.classList.add(result.correct ? 'correct' : 'wrong');
+                    }
+                });
+                
+                hasAnswered = true;
+                
+                // Show result
+                resultContainer.classList.remove('hidden');
+                answerResult.textContent = result.correct ? '✅ Correct! +10 points' : '❌ Wrong answer';
+                answerResult.className = `status-message ${result.correct ? 'success' : 'error'}`;
+                
+                // Update score
+                const state = await getQuizState(quizCode);
+                if (state && state.players) {
+                    const player = state.players.find(p => p.name === playerName);
+                    if (player) {
+                        playerScore.textContent = player.score || 0;
+                        console.log("📊 Score updated:", player.score);
+                    }
+                }
+                
+                showJoinResult(result.correct ? '🎉 Correct!' : '😅 Wrong!', result.correct ? 'success' : 'error');
+                
+            } catch (error) {
+                console.error("❌ Error submitting answer:", error);
+                showJoinResult('Error submitting answer: ' + error.message, 'error');
+                buttons.forEach(btn => btn.disabled = false);
+            }
+        }
+        
+        function showLeaderboard(leaderboard) {
+            console.log("🏆 Showing leaderboard:", leaderboard);
+            leaderboardContainer.classList.remove('hidden');
+            questionContainer.style.display = 'none';
+            waitingMessage.classList.add('hidden');
+            resultContainer.classList.add('hidden');
+            
+            playerLeaderboard.innerHTML = leaderboard.map((player, index) => 
+                `<div class="leaderboard-item" style="${player.name === playerName ? 'background: #667eea20;' : ''}">
+                    <span>
+                        <span class="rank">#${index + 1}</span>
+                        ${player.name} ${player.name === playerName ? '👤' : ''}
+                    </span>
+                    <span class="score">${player.score} pts</span>
+                </div>`
+            ).join('');
+            
+            showJoinResult('🏁 Quiz finished! Check the leaderboard.', 'success');
+        }
+        
+        // ============================================
+        // EVENT HANDLERS
+        // ============================================
+        
+        // Join Quiz
+        joinBtn.addEventListener('click', async () => {
+            console.log("🖱️ Join Quiz button clicked!");
+            const code = quizCodeInput.value.trim().toUpperCase();
+            const name = playerNameInput.value.trim();
+            
+            if (!code || code.length !== 6) {
+                showJoinResult('⚠️ Please enter a valid 6-digit quiz code.', 'error');
+                return;
+            }
+            
+            if (!name) {
+                showJoinResult('⚠️ Please enter your name.', 'error');
+                return;
+            }
+            
+            joinBtn.disabled = true;
+            joinBtn.textContent = '⏳ Joining...';
+            
+            try {
+                const result = await joinQuiz(code, name);
+                quizCode = code;
+                playerId = result.player_id;
+                playerName = name;
+                
+                console.log("✅ Joined quiz:", quizCode, "as:", playerName, "ID:", playerId);
+                
+                // Show quiz interface
+                joinSection.style.display = 'none';
+                quizInterface.classList.remove('hidden');
+                
+                playerQuizCode.textContent = quizCode;
+                playerNameDisplay.textContent = playerName;
+                playerScore.textContent = '0';
+                
+                // Connect WebSocket
+                connectWebSocket(quizCode, playerId);
+                
+                showJoinResult('✅ Joined successfully! Waiting for host...', 'success');
+                
+            } catch (error) {
+                console.error("❌ Join quiz error:", error);
+                showJoinResult('Error joining quiz: ' + error.message, 'error');
+                joinBtn.disabled = false;
+                joinBtn.textContent = '🎮 Join Quiz';
+            }
+        });
+        
+        // Enter key support
+        quizCodeInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                playerNameInput.focus();
+            }
+        });
+        
+        playerNameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                joinBtn.click();
+            }
+        });
+        
+        // Auto-uppercase for quiz code
+        quizCodeInput.addEventListener('input', () => {
+            quizCodeInput.value = quizCodeInput.value.toUpperCase();
+        });
+        
+        // ============================================
+        // EXPOSE FUNCTIONS FOR HTML ONCLICK
+        // ============================================
+        
+        const playerApp = {
+            selectAnswer: selectAnswer
+        };
+        
+        // Make it globally available
+        window.playerApp = playerApp;
+        
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+        
+        console.log("✅ Player dashboard initialized!");
+        console.log("🎮 Ready! Enter quiz code and name to join.");
+        
+        // Check for URL parameters (for quick joining)
+        const params = new URLSearchParams(window.location.search);
+        const codeParam = params.get('code');
+        if (codeParam) {
+            quizCodeInput.value = codeParam.toUpperCase();
+            playerNameInput.focus();
+            console.log("📋 Auto-filled code from URL:", codeParam);
+        }
+    </script>
+</body>
+</html>
